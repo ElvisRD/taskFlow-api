@@ -13,6 +13,8 @@ use App\Notifications\TaskAssigned;
 use App\Notifications\TaskCommented;
 use App\WorkspaceRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\Events\BroadcastNotificationCreated;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -115,6 +117,43 @@ class TaskNotificationTest extends TestCase
         Notification::assertNotSentTo($parentAuthor, TaskCommented::class);
         Notification::assertSentTo($creator, TaskCommented::class);
         Notification::assertSentTo($assignee, TaskCommented::class);
+    }
+
+    public function test_notifications_are_broadcast_to_the_recipient_private_channel(): void
+    {
+        Event::fake([BroadcastNotificationCreated::class]);
+
+        [$workspace, $board, $list] = $this->boardWithList();
+        $task = Task::factory()->for($list, 'list')->create();
+        $recipient = $this->addMember($workspace, WorkspaceRole::Member);
+
+        $recipient->notifyNow(new TaskAssigned($task, $workspace->owner), ['broadcast']);
+
+        Event::assertDispatched(
+            BroadcastNotificationCreated::class,
+            function (BroadcastNotificationCreated $event) use ($recipient): bool {
+                $channels = $event->broadcastOn();
+
+                return $event->notifiable->is($recipient)
+                    && count($channels) === 1
+                    && $channels[0]->name === 'private-App.Models.User.'.$recipient->id;
+            },
+        );
+    }
+
+    public function test_notifications_include_the_board_and_workspace_context(): void
+    {
+        [$workspace, $board, $list] = $this->boardWithList();
+        $task = Task::factory()->for($list, 'list')->create();
+        $recipient = $this->addMember($workspace, WorkspaceRole::Member);
+
+        $recipient->notifyNow(new TaskAssigned($task, $workspace->owner), ['database']);
+
+        $payload = $recipient->notifications()->latest('created_at')->firstOrFail()->data;
+
+        $this->assertSame($workspace->id, $payload['workspace_id']);
+        $this->assertSame($board->id, $payload['board_id']);
+        $this->assertSame($task->id, $payload['task_id']);
     }
 
     private function boardWithList(): array

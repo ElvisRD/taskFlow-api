@@ -20,7 +20,7 @@ class TaskNotificationPayloadTest extends TestCase
         $actor = new User(['name' => 'Ana']);
         $notification = new TaskAssigned($task, $actor);
 
-        $this->assertSame(['database', 'mail'], $notification->via($actor));
+        $this->assertSame(['database', 'mail', 'broadcast'], $notification->via($actor));
         $this->assertSame([
             'type' => 'task_assigned',
             'task_id' => 10,
@@ -28,6 +28,24 @@ class TaskNotificationPayloadTest extends TestCase
             'actor' => 'Ana',
         ], $notification->toDatabase($actor));
         $this->assertSame('Te asignaron una tarea', $notification->toMail($actor)->subject);
+    }
+
+    public function test_task_assigned_broadcast_payload_matches_the_web_client_shape(): void
+    {
+        $task = $this->task(10, 'Revisar el PR');
+        $actor = new User(['name' => 'Ana']);
+        $notification = new TaskAssigned($task, $actor);
+        $notification->id = 'notification-1';
+
+        $payload = $notification->toDatabase($actor);
+        $broadcast = $notification->broadcastWith();
+
+        $this->assertSame($payload, $notification->toBroadcast($actor));
+        $this->assertSame('notification-1', $broadcast['id']);
+        $this->assertSame('TaskAssigned', $broadcast['type']);
+        $this->assertSame($payload, $broadcast['payload']);
+        $this->assertNull($broadcast['read_at']);
+        $this->assertFalse($broadcast['is_read']);
     }
 
     public function test_task_commented_payload_limits_the_excerpt(): void
