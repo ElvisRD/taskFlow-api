@@ -22,13 +22,20 @@ class CommentController extends Controller
         $perPage = max(1, min($request->integer('per_page', 30), 100));
 
         return CommentResource::collection(
-            $task->comments()->with('author')->paginate($perPage),
+            $task->comments()
+                ->whereNull('parent_id')
+                ->with([
+                    'author',
+                    'replies' => fn ($query) => $query->with('author'),
+                ])
+                ->paginate($perPage),
         );
     }
 
     public function store(StoreCommentRequest $request, Task $task): JsonResponse
     {
         $comment = $task->comments()->create([
+            'parent_id' => $request->input('parent_id'),
             'user_id' => $request->user()->getKey(),
             'body' => $request->string('body')->trim()->toString(),
         ]);

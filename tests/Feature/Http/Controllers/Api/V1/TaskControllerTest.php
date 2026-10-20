@@ -4,6 +4,7 @@ namespace Tests\Feature\Http\Controllers\Api\V1;
 
 use App\Models\Board;
 use App\Models\BoardList;
+use App\Models\Comment;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\Workspace;
@@ -96,6 +97,20 @@ class TaskControllerTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.title', 'Diseñar la base de datos');
+    }
+
+    public function test_task_comment_count_includes_replies(): void
+    {
+        [$workspace, $board, $list] = $this->boardWithList();
+        $task = Task::factory()->for($list, 'list')->create();
+        $parent = Comment::factory()->for($task)->create();
+        Comment::factory()->for($task)->create(['parent_id' => $parent->id]);
+
+        Sanctum::actingAs($workspace->owner);
+
+        $this->getJson('/api/v1/boards/'.$board->id.'/tasks')
+            ->assertOk()
+            ->assertJsonPath('data.0.comments_count', 2);
     }
 
     public function test_index_filters_completed_tasks(): void
