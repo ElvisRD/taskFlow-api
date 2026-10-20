@@ -133,9 +133,6 @@ class AttachmentControllerTest extends TestCase
         $this->assertDatabaseHas('attachments', ['id' => $attachment->id]);
     }
 
-    /**
-     * @return array{0: Workspace, 1: Task}
-     */
     private function taskInWorkspace(): array
     {
         $workspace = Workspace::factory()->create();

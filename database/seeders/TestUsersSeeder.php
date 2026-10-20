@@ -7,11 +7,6 @@ use Illuminate\Database\Seeder;
 
 class TestUsersSeeder extends Seeder
 {
-    /**
-     * Crea (o actualiza) los usuarios de prueba que usa el frontend.
-     *
-     * Credenciales: ana@taskflow.test / password y beto@taskflow.test / password.
-     */
     public function run(): void
     {
         $users = [

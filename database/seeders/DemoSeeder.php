@@ -16,9 +16,6 @@ use Illuminate\Support\Facades\Storage;
 
 class DemoSeeder extends Seeder
 {
-    /**
-     * Seed a demo workspace with two users, one board and a few tasks.
-     */
     public function run(): void
     {
         $owner = User::updateOrCreate(

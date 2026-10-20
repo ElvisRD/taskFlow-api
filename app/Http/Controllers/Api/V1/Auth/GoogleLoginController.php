@@ -18,9 +18,6 @@ class GoogleLoginController extends Controller
 {
     public function __construct(private GoogleTokenVerifier $verifier) {}
 
-    /**
-     * Authenticate a user with a Google ID token and issue an API token.
-     */
     public function __invoke(GoogleLoginRequest $request): JsonResponse
     {
         try {
@@ -42,12 +39,6 @@ class GoogleLoginController extends Controller
         ], $created ? 201 : 200);
     }
 
-    /**
-     * Find the user linked to the Google account, link it to an existing
-     * account with the same email, or create a brand new one.
-     *
-     * @return array{0: User, 1: bool}
-     */
     private function resolveUser(GoogleIdentity $identity): array
     {
         $email = Str::lower($identity->email);
@@ -80,7 +71,6 @@ class GoogleLoginController extends Controller
                 'avatar' => $identity->avatar,
             ]);
 
-            // Google ya ha verificado el correo por nosotros.
             $user->email_verified_at = now();
             $user->save();
 

@@ -17,9 +17,6 @@ use Illuminate\Support\Facades\Gate;
 
 class BoardController extends Controller
 {
-    /**
-     * List the boards of the workspace.
-     */
     public function index(Request $request, Workspace $workspace): AnonymousResourceCollection
     {
         Gate::authorize('viewAny', [Board::class, $workspace]);
@@ -37,9 +34,6 @@ class BoardController extends Controller
         return BoardResource::collection($boards);
     }
 
-    /**
-     * Create a board inside the workspace.
-     */
     public function store(StoreBoardRequest $request, Workspace $workspace): JsonResponse
     {
         $board = $workspace->boards()->create([
@@ -56,9 +50,6 @@ class BoardController extends Controller
             ->setStatusCode(201);
     }
 
-    /**
-     * Show the board with its lists and tasks.
-     */
     public function show(Workspace $workspace, Board $board): BoardResource
     {
         Gate::authorize('view', $board);
@@ -73,9 +64,6 @@ class BoardController extends Controller
         return new BoardResource($board);
     }
 
-    /**
-     * Update the board.
-     */
     public function update(UpdateBoardRequest $request, Workspace $workspace, Board $board): BoardResource
     {
         $board->update($request->safe()->only(['name', 'description', 'color', 'position']));
@@ -83,9 +71,6 @@ class BoardController extends Controller
         return new BoardResource($board->loadCount('lists'));
     }
 
-    /**
-     * Delete the board along with its lists and tasks.
-     */
     public function destroy(Workspace $workspace, Board $board): Response
     {
         Gate::authorize('delete', $board);
@@ -95,9 +80,6 @@ class BoardController extends Controller
         return response()->noContent();
     }
 
-    /**
-     * Get the position a new board should take inside the workspace.
-     */
     private function nextPosition(Workspace $workspace): int
     {
         return (int) $workspace->boards()->max('position') + 1;

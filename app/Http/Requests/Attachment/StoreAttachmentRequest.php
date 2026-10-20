@@ -7,19 +7,11 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreAttachmentRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return $this->user()?->can('create', [Attachment::class, $this->route('task')]) ?? false;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, mixed>
-     */
     public function rules(): array
     {
         return [
@@ -32,11 +24,6 @@ class StoreAttachmentRequest extends FormRequest
         ];
     }
 
-    /**
-     * Get the custom validation messages.
-     *
-     * @return array<string, string>
-     */
     public function messages(): array
     {
         return [

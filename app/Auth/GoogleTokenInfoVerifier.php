@@ -6,25 +6,10 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
-/**
- * Verifica los ID tokens emitidos por Google Identity Services.
- *
- * Se apoya en el endpoint `tokeninfo` de Google, que comprueba la firma del
- * token, su caducidad y su emisor. Una vez recibidos los claims se validan
- * de nuevo en local el emisor, la audiencia (`aud`) y el correo verificado.
- */
 class GoogleTokenInfoVerifier implements GoogleTokenVerifier
 {
-    /**
-     * The endpoint Google exposes to inspect an ID token.
-     */
     private const ENDPOINT = 'https://oauth2.googleapis.com/tokeninfo';
 
-    /**
-     * The issuers Google is allowed to use for ID tokens.
-     *
-     * @var list<string>
-     */
     private const ISSUERS = ['accounts.google.com', 'https://accounts.google.com'];
 
     public function __construct(private string $clientId) {}
@@ -50,7 +35,6 @@ class GoogleTokenInfoVerifier implements GoogleTokenVerifier
             throw new InvalidGoogleIdentityToken('El token de Google no es válido o ha caducado.');
         }
 
-        /** @var array<string, mixed> $claims */
         $claims = $response->json() ?? [];
 
         $this->assertClaimsAreTrustworthy($claims);
@@ -63,9 +47,6 @@ class GoogleTokenInfoVerifier implements GoogleTokenVerifier
         );
     }
 
-    /**
-     * @param  array<string, mixed>  $claims
-     */
     private function assertClaimsAreTrustworthy(array $claims): void
     {
         if (! in_array($claims['iss'] ?? null, self::ISSUERS, true)) {

@@ -12,9 +12,6 @@ use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         $this->app->singleton(GoogleTokenVerifier::class, fn (): GoogleTokenVerifier => new GoogleTokenInfoVerifier(
@@ -22,17 +19,11 @@ class AppServiceProvider extends ServiceProvider
         ));
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         $this->configureRateLimiting();
     }
 
-    /**
-     * Configure the rate limiters used by the application.
-     */
     protected function configureRateLimiting(): void
     {
         RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)->by(

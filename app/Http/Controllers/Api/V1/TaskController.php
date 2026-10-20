@@ -20,9 +20,6 @@ use Illuminate\Support\Facades\Gate;
 
 class TaskController extends Controller
 {
-    /**
-     * List the tasks of the board with optional filters.
-     */
     public function index(Request $request, Board $board): AnonymousResourceCollection
     {
         Gate::authorize('view', $board);
@@ -53,9 +50,6 @@ class TaskController extends Controller
         return TaskResource::collection($tasks);
     }
 
-    /**
-     * Create a task inside the list.
-     */
     public function store(StoreTaskRequest $request, BoardList $list): JsonResponse
     {
         $task = $list->tasks()->create([
@@ -75,9 +69,6 @@ class TaskController extends Controller
             ->setStatusCode(201);
     }
 
-    /**
-     * Show a single task with its comments and attachments.
-     */
     public function show(Task $task): TaskResource
     {
         Gate::authorize('view', $task);
@@ -88,9 +79,6 @@ class TaskController extends Controller
         return new TaskResource($task);
     }
 
-    /**
-     * Update the task, including moving it between lists.
-     */
     public function update(UpdateTaskRequest $request, Task $task): TaskResource
     {
         $data = $request->safe()->only([
@@ -118,9 +106,6 @@ class TaskController extends Controller
         return new TaskResource($this->withDetails($task->refresh()));
     }
 
-    /**
-     * Delete the task.
-     */
     public function destroy(Task $task): Response
     {
         Gate::authorize('delete', $task);
@@ -130,9 +115,6 @@ class TaskController extends Controller
         return response()->noContent();
     }
 
-    /**
-     * Apply the requested ordering to the task query.
-     */
     private function applySorting(Builder $query, Request $request): void
     {
         match ($request->string('sort')->toString()) {
@@ -143,17 +125,11 @@ class TaskController extends Controller
         };
     }
 
-    /**
-     * Eager load the data the task resource exposes.
-     */
     private function withDetails(Task $task): Task
     {
         return $task->load(['creator', 'assignee'])->loadCount(['comments', 'attachments']);
     }
 
-    /**
-     * Get the position a new task should take inside the list.
-     */
     private function nextPosition(BoardList $list): int
     {
         return (int) $list->tasks()->reorder()->max('position') + 1;

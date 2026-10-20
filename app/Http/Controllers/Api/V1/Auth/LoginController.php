@@ -12,9 +12,6 @@ use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
-    /**
-     * Authenticate the user and issue an API token.
-     */
     public function __invoke(LoginRequest $request): JsonResponse
     {
         $email = $request->string('email')->lower()->trim()->toString();

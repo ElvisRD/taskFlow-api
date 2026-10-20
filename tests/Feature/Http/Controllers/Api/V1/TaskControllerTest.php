@@ -219,9 +219,6 @@ class TaskControllerTest extends TestCase
         $this->getJson('/api/v1/tasks/'.$task->id)->assertForbidden();
     }
 
-    /**
-     * @return array{0: Workspace, 1: Board, 2: BoardList}
-     */
     private function boardWithList(): array
     {
         $workspace = Workspace::factory()->create();

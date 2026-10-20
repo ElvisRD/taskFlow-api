@@ -90,10 +90,6 @@ class GoogleTokenInfoVerifierTest extends TestCase
         (new GoogleTokenInfoVerifier('client-123'))->verify('id-token');
     }
 
-    /**
-     * @param  array<string, mixed>  $overrides
-     * @return array<string, mixed>
-     */
     private function claims(array $overrides = []): array
     {
         return array_merge([

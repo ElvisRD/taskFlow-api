@@ -16,14 +16,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AttachmentController extends Controller
 {
-    /**
-     * The disk where the attachments are stored.
-     */
     private const DISK = 'local';
 
-    /**
-     * List the attachments of the task.
-     */
     public function index(Task $task): AnonymousResourceCollection
     {
         Gate::authorize('viewAny', [Attachment::class, $task]);
@@ -33,9 +27,6 @@ class AttachmentController extends Controller
         );
     }
 
-    /**
-     * Upload an attachment to the task.
-     */
     public function store(StoreAttachmentRequest $request, Task $task): JsonResponse
     {
         $file = $request->file('file');
@@ -53,9 +44,6 @@ class AttachmentController extends Controller
             ->setStatusCode(201);
     }
 
-    /**
-     * Download the stored attachment.
-     */
     public function download(Attachment $attachment): StreamedResponse
     {
         Gate::authorize('view', $attachment);
@@ -65,9 +53,6 @@ class AttachmentController extends Controller
         return Storage::disk(self::DISK)->download($attachment->path, $attachment->name);
     }
 
-    /**
-     * Delete the attachment and its stored file.
-     */
     public function destroy(Attachment $attachment): Response
     {
         Gate::authorize('delete', $attachment);

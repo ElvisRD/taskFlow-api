@@ -2,9 +2,6 @@
 
 namespace App\Auth;
 
-/**
- * Identidad de una cuenta de Google ya verificada.
- */
 final readonly class GoogleIdentity
 {
     public function __construct(

@@ -11,9 +11,6 @@ use Illuminate\Support\Facades\DB;
 
 class RegisterController extends Controller
 {
-    /**
-     * Register a new user and issue an API token.
-     */
     public function __invoke(RegisterRequest $request): JsonResponse
     {
         $user = DB::transaction(fn (): User => User::create([

@@ -11,19 +11,11 @@ use Illuminate\Validation\Rule;
 
 class StoreTaskRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return $this->user()?->can('create', [Task::class, $this->route('list')]) ?? false;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, mixed>
-     */
     public function rules(): array
     {
         return [
@@ -36,11 +28,6 @@ class StoreTaskRequest extends FormRequest
         ];
     }
 
-    /**
-     * Get the additional validation callbacks.
-     *
-     * @return array<int, callable>
-     */
     public function after(): array
     {
         return [

@@ -20,9 +20,6 @@ use Illuminate\Support\Str;
 
 class WorkspaceController extends Controller
 {
-    /**
-     * List the workspaces the authenticated user belongs to.
-     */
     public function index(Request $request): AnonymousResourceCollection
     {
         $perPage = max(1, min($request->integer('per_page', 15), 100));
@@ -38,9 +35,6 @@ class WorkspaceController extends Controller
         return WorkspaceResource::collection($workspaces);
     }
 
-    /**
-     * Create a new workspace and add the creator as its owner.
-     */
     public function store(StoreWorkspaceRequest $request): JsonResponse
     {
         $user = $request->user();
@@ -65,9 +59,6 @@ class WorkspaceController extends Controller
             ->setStatusCode(201);
     }
 
-    /**
-     * Show a single workspace.
-     */
     public function show(Request $request, Workspace $workspace): WorkspaceResource
     {
         Gate::authorize('view', $workspace);
@@ -75,9 +66,6 @@ class WorkspaceController extends Controller
         return $this->resource($request->user(), $workspace);
     }
 
-    /**
-     * Update the workspace.
-     */
     public function update(UpdateWorkspaceRequest $request, Workspace $workspace): WorkspaceResource
     {
         $workspace->update($request->safe()->only(['name', 'description']));
@@ -85,9 +73,6 @@ class WorkspaceController extends Controller
         return $this->resource($request->user(), $workspace);
     }
 
-    /**
-     * Delete the workspace.
-     */
     public function destroy(Workspace $workspace): Response
     {
         Gate::authorize('delete', $workspace);
@@ -97,9 +82,6 @@ class WorkspaceController extends Controller
         return response()->noContent();
     }
 
-    /**
-     * Build the workspace resource with its owner, counters and the role of the current user.
-     */
     private function resource(User $user, Workspace $workspace): WorkspaceResource
     {
         $workspace = $user->workspaces()
@@ -111,9 +93,6 @@ class WorkspaceController extends Controller
         return new WorkspaceResource($workspace);
     }
 
-    /**
-     * Build a unique slug for the given workspace name.
-     */
     private function uniqueSlug(string $name): string
     {
         $base = Str::slug($name) ?: 'workspace';

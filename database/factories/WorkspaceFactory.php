@@ -8,16 +8,8 @@ use App\WorkspaceRole;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
-/**
- * @extends Factory<Workspace>
- */
 class WorkspaceFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         $name = Str::title(fake()->unique()->words(2, true));
@@ -30,9 +22,6 @@ class WorkspaceFactory extends Factory
         ];
     }
 
-    /**
-     * Configure the factory.
-     */
     public function configure(): static
     {
         return $this->afterCreating(function (Workspace $workspace): void {

@@ -14,9 +14,6 @@ use Illuminate\Support\Facades\Gate;
 
 class BoardListController extends Controller
 {
-    /**
-     * Create a list inside the board.
-     */
     public function store(StoreBoardListRequest $request, Board $board): JsonResponse
     {
         $list = $board->lists()->create([
@@ -31,9 +28,6 @@ class BoardListController extends Controller
             ->setStatusCode(201);
     }
 
-    /**
-     * Update the list.
-     */
     public function update(UpdateBoardListRequest $request, Board $board, BoardList $list): BoardListResource
     {
         $list->update($request->safe()->only(['name', 'position']));
@@ -41,9 +35,6 @@ class BoardListController extends Controller
         return new BoardListResource($list->loadCount('tasks'));
     }
 
-    /**
-     * Delete the list along with its tasks.
-     */
     public function destroy(Board $board, BoardList $list): Response
     {
         Gate::authorize('delete', $list);
@@ -53,9 +44,6 @@ class BoardListController extends Controller
         return response()->noContent();
     }
 
-    /**
-     * Get the position a new list should take inside the board.
-     */
     private function nextPosition(Board $board): int
     {
         return (int) $board->lists()->reorder()->max('position') + 1;

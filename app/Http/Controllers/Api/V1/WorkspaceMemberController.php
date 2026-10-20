@@ -17,9 +17,6 @@ use Illuminate\Support\Facades\Gate;
 
 class WorkspaceMemberController extends Controller
 {
-    /**
-     * List the members of the workspace.
-     */
     public function index(Request $request, Workspace $workspace): AnonymousResourceCollection
     {
         Gate::authorize('view', $workspace);
@@ -34,9 +31,6 @@ class WorkspaceMemberController extends Controller
         return WorkspaceMemberResource::collection($members);
     }
 
-    /**
-     * Add an existing user to the workspace.
-     */
     public function store(StoreMemberRequest $request, Workspace $workspace): JsonResponse
     {
         $user = User::whereRaw('LOWER(email) = ?', [
@@ -52,9 +46,6 @@ class WorkspaceMemberController extends Controller
             ->setStatusCode(201);
     }
 
-    /**
-     * Update the role of a workspace member.
-     */
     public function update(UpdateMemberRequest $request, Workspace $workspace, User $user): WorkspaceMemberResource
     {
         abort_unless($this->member($workspace, $user) !== null, 404);
@@ -66,9 +57,6 @@ class WorkspaceMemberController extends Controller
         return new WorkspaceMemberResource($this->member($workspace, $user));
     }
 
-    /**
-     * Remove a member from the workspace.
-     */
     public function destroy(Workspace $workspace, User $user): Response
     {
         Gate::authorize('manageMembers', $workspace);
@@ -81,9 +69,6 @@ class WorkspaceMemberController extends Controller
         return response()->noContent();
     }
 
-    /**
-     * Resolve the membership of the user inside the workspace.
-     */
     private function member(Workspace $workspace, User $user): ?User
     {
         return $workspace->members()->whereKey($user->getKey())->first();

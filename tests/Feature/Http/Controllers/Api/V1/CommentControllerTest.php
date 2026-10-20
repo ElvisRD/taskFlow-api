@@ -100,9 +100,6 @@ class CommentControllerTest extends TestCase
         $this->assertDatabaseMissing('comments', ['id' => $comment->id]);
     }
 
-    /**
-     * @return array{0: Workspace, 1: Task}
-     */
     private function taskInWorkspace(): array
     {
         $workspace = Workspace::factory()->create();

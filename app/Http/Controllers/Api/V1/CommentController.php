@@ -15,9 +15,6 @@ use Illuminate\Support\Facades\Gate;
 
 class CommentController extends Controller
 {
-    /**
-     * List the comments of the task.
-     */
     public function index(Request $request, Task $task): AnonymousResourceCollection
     {
         Gate::authorize('viewAny', [Comment::class, $task]);
@@ -29,9 +26,6 @@ class CommentController extends Controller
         );
     }
 
-    /**
-     * Add a comment to the task.
-     */
     public function store(StoreCommentRequest $request, Task $task): JsonResponse
     {
         $comment = $task->comments()->create([
@@ -44,9 +38,6 @@ class CommentController extends Controller
             ->setStatusCode(201);
     }
 
-    /**
-     * Delete the comment.
-     */
     public function destroy(Comment $comment): Response
     {
         Gate::authorize('delete', $comment);
