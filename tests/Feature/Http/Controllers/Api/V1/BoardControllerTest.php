@@ -142,6 +142,81 @@ class BoardControllerTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_admin_reorders_the_boards_of_the_workspace(): void
+    {
+        $workspace = Workspace::factory()->create();
+        $first = Board::factory()->for($workspace)->create(['position' => 1]);
+        $second = Board::factory()->for($workspace)->create(['position' => 2]);
+        $third = Board::factory()->for($workspace)->create(['position' => 3]);
+
+        Sanctum::actingAs($workspace->owner);
+
+        $this->patchJson('/api/v1/workspaces/'.$workspace->id.'/boards/reorder', [
+            'boards' => [$third->id, $first->id, $second->id],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $third->id)
+            ->assertJsonPath('data.1.id', $first->id)
+            ->assertJsonPath('data.2.id', $second->id)
+            ->assertJsonPath('data.0.position', 1)
+            ->assertJsonPath('data.2.position', 3);
+
+        $this->assertDatabaseHas('boards', ['id' => $third->id, 'position' => 1]);
+        $this->assertDatabaseHas('boards', ['id' => $first->id, 'position' => 2]);
+        $this->assertDatabaseHas('boards', ['id' => $second->id, 'position' => 3]);
+    }
+
+    public function test_plain_member_cannot_reorder_the_boards(): void
+    {
+        $workspace = Workspace::factory()->create();
+        $first = Board::factory()->for($workspace)->create(['position' => 1]);
+        $second = Board::factory()->for($workspace)->create(['position' => 2]);
+        $member = $this->addMember($workspace, WorkspaceRole::Member);
+
+        Sanctum::actingAs($member);
+
+        $this->patchJson('/api/v1/workspaces/'.$workspace->id.'/boards/reorder', [
+            'boards' => [$second->id, $first->id],
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('boards', ['id' => $first->id, 'position' => 1]);
+    }
+
+    public function test_reordering_boards_requires_every_board_of_the_workspace(): void
+    {
+        $workspace = Workspace::factory()->create();
+        $first = Board::factory()->for($workspace)->create(['position' => 1]);
+        Board::factory()->for($workspace)->create(['position' => 2]);
+
+        Sanctum::actingAs($workspace->owner);
+
+        $this->patchJson('/api/v1/workspaces/'.$workspace->id.'/boards/reorder', [
+            'boards' => [$first->id],
+        ])->assertUnprocessable()->assertJsonValidationErrors('boards');
+    }
+
+    public function test_admin_can_reorder_a_workspace_without_boards(): void
+    {
+        $workspace = Workspace::factory()->create();
+
+        Sanctum::actingAs($workspace->owner);
+
+        $this->patchJson('/api/v1/workspaces/'.$workspace->id.'/boards/reorder', [
+            'boards' => [],
+        ])
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_guest_cannot_reorder_boards(): void
+    {
+        $workspace = Workspace::factory()->create();
+
+        $this->patchJson('/api/v1/workspaces/'.$workspace->id.'/boards/reorder', [
+            'boards' => [],
+        ])->assertUnauthorized();
+    }
+
     private function addMember(Workspace $workspace, WorkspaceRole $role): User
     {
         $member = User::factory()->create();

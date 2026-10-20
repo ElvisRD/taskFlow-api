@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Board\ReorderBoardRequest;
 use App\Http\Requests\Board\StoreBoardRequest;
 use App\Http\Requests\Board\UpdateBoardRequest;
 use App\Http\Resources\BoardResource;
@@ -13,10 +14,26 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class BoardController extends Controller
 {
+    public function reorder(ReorderBoardRequest $request, Workspace $workspace): AnonymousResourceCollection
+    {
+        $ids = array_map('intval', $request->input('boards', []));
+
+        DB::transaction(function () use ($workspace, $ids): void {
+            foreach ($ids as $index => $id) {
+                $workspace->boards()->whereKey($id)->update(['position' => $index + 1]);
+            }
+        });
+
+        return BoardResource::collection(
+            $workspace->boards()->withCount('lists')->orderBy('position')->get(),
+        );
+    }
+
     public function index(Request $request, Workspace $workspace): AnonymousResourceCollection
     {
         Gate::authorize('viewAny', [Board::class, $workspace]);

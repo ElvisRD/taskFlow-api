@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 #[Fillable([
     'board_list_id',
@@ -110,6 +111,51 @@ class Task extends Model
             ->implode(' ');
 
         return $query->orderByRaw("CASE priority {$cases} ELSE 0 END {$direction}");
+    }
+
+    public function moveToList(BoardList $destination, ?int $index = null): void
+    {
+        DB::transaction(function () use ($destination, $index): void {
+            $taskId = $this->getKey();
+            $sourceListId = $this->board_list_id;
+
+            $destinationIds = static::query()
+                ->where('board_list_id', $destination->getKey())
+                ->whereKeyNot($taskId)
+                ->orderBy('position')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->pluck('id')
+                ->all();
+
+            $index = $index === null ? count($destinationIds) : max(0, min($index, count($destinationIds)));
+
+            array_splice($destinationIds, $index, 0, [$taskId]);
+
+            $this->board_list_id = $destination->getKey();
+            $this->save();
+
+            self::reindexPositions($destinationIds);
+
+            if ($sourceListId !== $destination->getKey()) {
+                $sourceIds = static::query()
+                    ->where('board_list_id', $sourceListId)
+                    ->orderBy('position')
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->pluck('id')
+                    ->all();
+
+                self::reindexPositions($sourceIds);
+            }
+        });
+    }
+
+    private static function reindexPositions(array $ids): void
+    {
+        foreach ($ids as $position => $id) {
+            DB::table('tasks')->where('id', $id)->update(['position' => $position + 1]);
+        }
     }
 
     protected function casts(): array

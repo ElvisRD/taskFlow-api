@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Task\MoveTaskRequest;
 use App\Http\Requests\Task\StoreTaskRequest;
 use App\Http\Requests\Task\UpdateTaskRequest;
 use App\Http\Resources\TaskResource;
@@ -113,6 +114,42 @@ class TaskController extends Controller
         $task->delete();
 
         return response()->noContent();
+    }
+
+    public function move(MoveTaskRequest $request, Task $task): TaskResource
+    {
+        $destination = BoardList::findOrFail($request->integer('board_list_id'));
+
+        $task->moveToList($destination, $this->destinationIndex($request, $task, $destination));
+
+        return new TaskResource($this->withDetails($task->refresh()));
+    }
+
+    private function destinationIndex(MoveTaskRequest $request, Task $task, BoardList $destination): ?int
+    {
+        $reference = match (true) {
+            $request->filled('before_task_id') => $request->integer('before_task_id'),
+            $request->filled('after_task_id') => $request->integer('after_task_id'),
+            default => null,
+        };
+
+        if ($reference === null) {
+            return null;
+        }
+
+        $index = Task::query()
+            ->where('board_list_id', $destination->getKey())
+            ->whereKeyNot($task->getKey())
+            ->orderBy('position')
+            ->orderBy('id')
+            ->pluck('id')
+            ->search($reference);
+
+        if ($index === false) {
+            return null;
+        }
+
+        return $request->filled('after_task_id') ? $index + 1 : $index;
     }
 
     private function applySorting(Builder $query, Request $request): void

@@ -3,17 +3,35 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BoardList\ReorderBoardListRequest;
 use App\Http\Requests\BoardList\StoreBoardListRequest;
 use App\Http\Requests\BoardList\UpdateBoardListRequest;
 use App\Http\Resources\BoardListResource;
 use App\Models\Board;
 use App\Models\BoardList;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class BoardListController extends Controller
 {
+    public function reorder(ReorderBoardListRequest $request, Board $board): AnonymousResourceCollection
+    {
+        $ids = array_map('intval', $request->input('lists', []));
+
+        DB::transaction(function () use ($board, $ids): void {
+            foreach ($ids as $index => $id) {
+                $board->lists()->whereKey($id)->update(['position' => $index + 1]);
+            }
+        });
+
+        return BoardListResource::collection(
+            $board->lists()->withCount('tasks')->get(),
+        );
+    }
+
     public function store(StoreBoardListRequest $request, Board $board): JsonResponse
     {
         $list = $board->lists()->create([

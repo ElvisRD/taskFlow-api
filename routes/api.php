@@ -38,9 +38,15 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('workspaces/{workspace}/members/{user}', [WorkspaceMemberController::class, 'destroy'])
             ->name('workspaces.members.destroy');
 
+        Route::patch('workspaces/{workspace}/boards/reorder', [BoardController::class, 'reorder'])
+            ->name('workspaces.boards.reorder');
+
         Route::apiResource('workspaces.boards', BoardController::class)
             ->scoped()
             ->only(['index', 'store', 'show', 'update', 'destroy']);
+
+        Route::patch('boards/{board}/lists/reorder', [BoardListController::class, 'reorder'])
+            ->name('boards.lists.reorder');
 
         Route::apiResource('boards.lists', BoardListController::class)
             ->scoped()
@@ -50,6 +56,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('lists/{list}/tasks', [TaskController::class, 'store'])->name('lists.tasks.store');
         Route::get('tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
         Route::patch('tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+        Route::patch('tasks/{task}/move', [TaskController::class, 'move'])->name('tasks.move');
         Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
 
         Route::get('tasks/{task}/comments', [CommentController::class, 'index'])->name('tasks.comments.index');
