@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\TaskActivityController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
 use App\Http\Controllers\Api\V1\WorkspaceMemberController;
+use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -28,6 +29,9 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('auth/logout', LogoutController::class)->name('auth.logout');
         Route::get('auth/me', MeController::class)->name('auth.me');
+
+        Route::post('broadcasting/auth', [BroadcastController::class, 'authenticate'])
+            ->name('broadcasting.auth');
 
         Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::patch('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');

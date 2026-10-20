@@ -3,6 +3,8 @@
 namespace App\Notifications;
 
 use App\Models\Task;
+use App\Notifications\Concerns\BroadcastsTaskNotification;
+use App\Notifications\Concerns\IncludesTaskContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -11,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 
 class TaskDueReminder extends Notification implements ShouldQueue
 {
-    use Queueable, SerializesModels;
+    use BroadcastsTaskNotification, IncludesTaskContext, Queueable, SerializesModels;
 
     public const DueSoon = 'due_soon';
 
@@ -24,10 +26,18 @@ class TaskDueReminder extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['database', 'mail'];
+        return ['database', 'mail', 'broadcast'];
     }
 
     public function toDatabase(object $notifiable): array
+    {
+        return $this->notificationPayload();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function notificationPayload(): array
     {
         return [
             'type' => $this->scope === self::Overdue ? 'task_overdue' : 'task_due_soon',
@@ -35,6 +45,7 @@ class TaskDueReminder extends Notification implements ShouldQueue
             'title' => $this->task->title,
             'due_date' => $this->task->due_date?->toDateString(),
             'scope' => $this->scope,
+            ...$this->taskContext(),
         ];
     }
 
