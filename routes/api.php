@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\BoardController;
 use App\Http\Controllers\Api\V1\BoardListController;
 use App\Http\Controllers\Api\V1\CommentController;
+use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\TaskActivityController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
 use App\Http\Controllers\Api\V1\WorkspaceMemberController;
@@ -26,6 +28,10 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('auth/logout', LogoutController::class)->name('auth.logout');
         Route::get('auth/me', MeController::class)->name('auth.me');
+
+        Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::patch('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+        Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
 
         Route::apiResource('workspaces', WorkspaceController::class);
 
@@ -58,6 +64,8 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
         Route::patch('tasks/{task}/move', [TaskController::class, 'move'])->name('tasks.move');
         Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+
+        Route::get('tasks/{task}/activities', [TaskActivityController::class, 'index'])->name('tasks.activities.index');
 
         Route::get('tasks/{task}/comments', [CommentController::class, 'index'])->name('tasks.comments.index');
         Route::post('tasks/{task}/comments', [CommentController::class, 'store'])->name('tasks.comments.store');

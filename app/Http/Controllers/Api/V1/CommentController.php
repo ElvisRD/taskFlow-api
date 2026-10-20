@@ -7,6 +7,10 @@ use App\Http\Requests\Comment\StoreCommentRequest;
 use App\Http\Resources\CommentResource;
 use App\Models\Comment;
 use App\Models\Task;
+use App\Models\User;
+use App\Notifications\CommentReply;
+use App\Notifications\TaskCommented;
+use App\TaskActivityType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -40,6 +44,12 @@ class CommentController extends Controller
             'body' => $request->string('body')->trim()->toString(),
         ]);
 
+        $task->recordActivity(TaskActivityType::CommentAdded, $request->user(), [
+            'comment_id' => $comment->getKey(),
+        ]);
+
+        $this->notifyParticipants($task, $comment, $request->user());
+
         return (new CommentResource($comment->load('author')))
             ->response()
             ->setStatusCode(201);
@@ -52,5 +62,23 @@ class CommentController extends Controller
         $comment->delete();
 
         return response()->noContent();
+    }
+
+    private function notifyParticipants(Task $task, Comment $comment, User $actor): void
+    {
+        $replyRecipient = $comment->parent?->author;
+
+        $recipients = collect([$task->creator, $task->assignee])
+            ->filter()
+            ->unique(fn (User $user): int => $user->getKey())
+            ->reject(fn (User $user): bool => $user->is($actor));
+
+        if ($replyRecipient !== null && ! $replyRecipient->is($actor)) {
+            $replyRecipient->notify(new CommentReply($task, $comment, $actor));
+
+            $recipients = $recipients->reject(fn (User $user): bool => $user->is($replyRecipient));
+        }
+
+        $recipients->each(fn (User $user) => $user->notify(new TaskCommented($task, $comment, $actor)));
     }
 }

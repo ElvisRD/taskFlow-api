@@ -10,6 +10,9 @@ use App\Http\Resources\TaskResource;
 use App\Models\Board;
 use App\Models\BoardList;
 use App\Models\Task;
+use App\Models\User;
+use App\Notifications\TaskAssigned;
+use App\TaskActivityType;
 use App\TaskPriority;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -65,6 +68,12 @@ class TaskController extends Controller
                 : $this->nextPosition($list),
         ]);
 
+        $task->recordActivity(TaskActivityType::Created, $request->user());
+
+        if ($task->assigned_to !== null) {
+            $this->notifyAssignee($task->assigned_to, $task, $request->user());
+        }
+
         return (new TaskResource($this->withDetails($task)))
             ->response()
             ->setStatusCode(201);
@@ -86,6 +95,10 @@ class TaskController extends Controller
             'title', 'description', 'assigned_to', 'priority', 'due_date', 'position',
         ]);
 
+        $previousListId = $task->board_list_id;
+        $previousAssignee = $task->assigned_to;
+        $wasCompleted = $task->isCompleted();
+
         DB::transaction(function () use ($request, $task, $data): void {
             if ($request->has('board_list_id')) {
                 $data['board_list_id'] = $request->integer('board_list_id');
@@ -104,7 +117,54 @@ class TaskController extends Controller
             $task->fill($data)->save();
         });
 
-        return new TaskResource($this->withDetails($task->refresh()));
+        $changed = array_keys($task->getChanges());
+
+        if (in_array('due_date', $changed, true)) {
+            $task->reminders()->delete();
+        }
+
+        $task->refresh();
+
+        if ($task->board_list_id !== $previousListId) {
+            $task->recordActivity(TaskActivityType::Moved, $request->user(), [
+                'from_board_list_id' => $previousListId,
+                'to_board_list_id' => $task->board_list_id,
+            ]);
+        }
+
+        if ($task->assigned_to !== $previousAssignee) {
+            if ($task->assigned_to === null) {
+                $task->recordActivity(TaskActivityType::Unassigned, $request->user(), [
+                    'assigned_to' => $previousAssignee,
+                ]);
+            } else {
+                $task->recordActivity(TaskActivityType::Assigned, $request->user(), [
+                    'assigned_to' => $task->assigned_to,
+                ]);
+
+                $this->notifyAssignee($task->assigned_to, $task, $request->user());
+            }
+        }
+
+        if ($task->isCompleted() !== $wasCompleted) {
+            $task->recordActivity(
+                $task->isCompleted() ? TaskActivityType::Completed : TaskActivityType::Reopened,
+                $request->user(),
+            );
+        }
+
+        $fields = collect($changed)
+            ->reject(fn (string $field): bool => in_array($field, [
+                'updated_at', 'position', 'board_list_id', 'completed_at', 'assigned_to',
+            ], true))
+            ->values()
+            ->all();
+
+        if ($fields !== []) {
+            $task->recordActivity(TaskActivityType::Updated, $request->user(), ['fields' => $fields]);
+        }
+
+        return new TaskResource($this->withDetails($task));
     }
 
     public function destroy(Task $task): Response
@@ -119,10 +179,20 @@ class TaskController extends Controller
     public function move(MoveTaskRequest $request, Task $task): TaskResource
     {
         $destination = BoardList::findOrFail($request->integer('board_list_id'));
+        $originListId = $task->board_list_id;
 
         $task->moveToList($destination, $this->destinationIndex($request, $task, $destination));
 
-        return new TaskResource($this->withDetails($task->refresh()));
+        $task->refresh();
+
+        if ($task->board_list_id !== $originListId) {
+            $task->recordActivity(TaskActivityType::Moved, $request->user(), [
+                'from_board_list_id' => $originListId,
+                'to_board_list_id' => $task->board_list_id,
+            ]);
+        }
+
+        return new TaskResource($this->withDetails($task));
     }
 
     private function destinationIndex(MoveTaskRequest $request, Task $task, BoardList $destination): ?int
@@ -165,6 +235,15 @@ class TaskController extends Controller
     private function withDetails(Task $task): Task
     {
         return $task->load(['creator', 'assignee'])->loadCount(['comments', 'attachments']);
+    }
+
+    private function notifyAssignee(int $assigneeId, Task $task, User $actor): void
+    {
+        $assignee = User::find($assigneeId);
+
+        if ($assignee !== null && ! $assignee->is($actor)) {
+            $assignee->notify(new TaskAssigned($task, $actor));
+        }
     }
 
     private function nextPosition(BoardList $list): int

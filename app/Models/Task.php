@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\TaskActivityType;
 use App\TaskPriority;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -50,6 +51,25 @@ class Task extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(Attachment::class)->latest();
+    }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(TaskActivity::class)->latest();
+    }
+
+    public function reminders(): HasMany
+    {
+        return $this->hasMany(TaskReminder::class);
+    }
+
+    public function recordActivity(TaskActivityType $type, ?User $actor = null, array $data = []): TaskActivity
+    {
+        return $this->activities()->create([
+            'user_id' => $actor?->getKey(),
+            'type' => $type->value,
+            'data' => $data === [] ? null : $data,
+        ]);
     }
 
     public function board(): Board
