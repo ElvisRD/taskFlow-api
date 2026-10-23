@@ -6,6 +6,8 @@ use App\Models\Task;
 use App\Models\User;
 use App\Notifications\Concerns\BroadcastsTaskNotification;
 use App\Notifications\Concerns\IncludesTaskContext;
+use App\Notifications\Concerns\ResolvesNotificationChannels;
+use App\NotificationType;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,16 +16,16 @@ use Illuminate\Queue\SerializesModels;
 
 class TaskAssigned extends Notification implements ShouldQueue
 {
-    use BroadcastsTaskNotification, IncludesTaskContext, Queueable, SerializesModels;
+    use BroadcastsTaskNotification, IncludesTaskContext, Queueable, ResolvesNotificationChannels, SerializesModels;
 
     public function __construct(
         public Task $task,
         public User $actor,
     ) {}
 
-    public function via(object $notifiable): array
+    public function notificationType(): NotificationType
     {
-        return ['database', 'mail', 'broadcast'];
+        return NotificationType::TaskAssigned;
     }
 
     public function toDatabase(object $notifiable): array

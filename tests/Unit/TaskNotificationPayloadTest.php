@@ -9,6 +9,7 @@ use App\Notifications\CommentReply;
 use App\Notifications\TaskAssigned;
 use App\Notifications\TaskCommented;
 use App\Notifications\TaskDueReminder;
+use App\NotificationType;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -46,6 +47,34 @@ class TaskNotificationPayloadTest extends TestCase
         $this->assertSame($payload, $broadcast['payload']);
         $this->assertNull($broadcast['read_at']);
         $this->assertFalse($broadcast['is_read']);
+    }
+
+    public function test_notification_types_match_their_preference_keys(): void
+    {
+        $task = $this->task(10, 'Tarea');
+        $comment = new Comment(['body' => 'Comentario']);
+        $actor = new User(['name' => 'Ana']);
+
+        $this->assertSame(
+            NotificationType::TaskAssigned,
+            (new TaskAssigned($task, $actor))->notificationType(),
+        );
+        $this->assertSame(
+            NotificationType::TaskCommented,
+            (new TaskCommented($task, $comment, $actor))->notificationType(),
+        );
+        $this->assertSame(
+            NotificationType::CommentReply,
+            (new CommentReply($task, $comment, $actor))->notificationType(),
+        );
+        $this->assertSame(
+            NotificationType::TaskDueSoon,
+            (new TaskDueReminder($task, TaskDueReminder::DueSoon))->notificationType(),
+        );
+        $this->assertSame(
+            NotificationType::TaskDueOverdue,
+            (new TaskDueReminder($task, TaskDueReminder::Overdue))->notificationType(),
+        );
     }
 
     public function test_task_commented_payload_limits_the_excerpt(): void

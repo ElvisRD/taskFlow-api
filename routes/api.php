@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\V1\BoardController;
 use App\Http\Controllers\Api\V1\BoardListController;
 use App\Http\Controllers\Api\V1\CommentController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\NotificationMuteController;
+use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\TaskActivityController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
@@ -34,6 +36,14 @@ Route::prefix('v1')->group(function (): void {
             ->name('broadcasting.auth');
 
         Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('notifications/preferences', [NotificationPreferenceController::class, 'index'])
+            ->name('notifications.preferences.index');
+        Route::patch('notifications/preferences/{type}', [NotificationPreferenceController::class, 'update'])
+            ->name('notifications.preferences.update');
+        Route::post('notifications/mutes', [NotificationMuteController::class, 'store'])
+            ->name('notifications.mutes.store');
+        Route::delete('notifications/mutes/{mute}', [NotificationMuteController::class, 'destroy'])
+            ->name('notifications.mutes.destroy');
         Route::patch('notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
         Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
 

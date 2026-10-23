@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\NotificationType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -43,6 +45,86 @@ class User extends Authenticatable
     public function attachments(): HasMany
     {
         return $this->hasMany(Attachment::class);
+    }
+
+    public function notificationPreferences(): HasMany
+    {
+        return $this->hasMany(NotificationPreference::class);
+    }
+
+    public function notificationMutes(): HasMany
+    {
+        return $this->hasMany(NotificationMute::class);
+    }
+
+    /**
+     * Resolve the delivery channels for a notification, honouring the
+     * user's per-type preferences and workspace/board mutes.
+     *
+     * @return array<int, string>
+     */
+    public function notificationChannels(NotificationType $type, ?Task $task = null): array
+    {
+        if (! $this->exists) {
+            return ['database', 'mail', 'broadcast'];
+        }
+
+        if ($task !== null && $this->mutesNotificationsFor($task)) {
+            return [];
+        }
+
+        $preference = $this->notificationPreferences()
+            ->where('type', $type->value)
+            ->first();
+
+        $inApp = $preference?->in_app ?? true;
+        $email = $preference?->email ?? true;
+
+        $channels = [];
+
+        if ($inApp) {
+            $channels[] = 'database';
+        }
+
+        if ($email) {
+            $channels[] = 'mail';
+        }
+
+        if ($inApp) {
+            $channels[] = 'broadcast';
+        }
+
+        return $channels;
+    }
+
+    private function mutesNotificationsFor(Task $task): bool
+    {
+        $list = $task->list;
+
+        if ($list === null) {
+            return false;
+        }
+
+        $boardId = $list->board_id;
+        $workspaceId = $list->board?->workspace_id;
+
+        return $this->notificationMutes()
+            ->where(function (Builder $query) use ($boardId, $workspaceId): void {
+                if ($workspaceId !== null) {
+                    $query->orWhere(function (Builder $query) use ($workspaceId): void {
+                        $query->where('muteable_type', Workspace::class)
+                            ->where('muteable_id', $workspaceId);
+                    });
+                }
+
+                if ($boardId !== null) {
+                    $query->orWhere(function (Builder $query) use ($boardId): void {
+                        $query->where('muteable_type', Board::class)
+                            ->where('muteable_id', $boardId);
+                    });
+                }
+            })
+            ->exists();
     }
 
     protected function casts(): array

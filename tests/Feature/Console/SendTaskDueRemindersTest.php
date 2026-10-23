@@ -9,8 +9,10 @@ use App\Models\User;
 use App\Models\Workspace;
 use App\Notifications\TaskDueReminder;
 use App\WorkspaceRole;
+use Illuminate\Console\Scheduling\Event;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Schedule;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -83,6 +85,75 @@ class SendTaskDueRemindersTest extends TestCase
 
         $this->assertDatabaseCount('task_reminders', 0);
         Notification::assertNothingSent();
+    }
+
+    public function test_it_ignores_tasks_due_today_or_later_than_tomorrow(): void
+    {
+        Notification::fake();
+
+        [$workspace, $list] = $this->workspaceWithList();
+        $assignee = $this->addMember($workspace, WorkspaceRole::Member);
+
+        $dueTomorrow = Task::factory()->for($list, 'list')->create([
+            'assigned_to' => $assignee->id,
+            'due_date' => today()->addDay(),
+        ]);
+        $dueToday = Task::factory()->for($list, 'list')->create([
+            'assigned_to' => $assignee->id,
+            'due_date' => today(),
+        ]);
+        $dueLater = Task::factory()->for($list, 'list')->create([
+            'assigned_to' => $assignee->id,
+            'due_date' => today()->addDays(2),
+        ]);
+
+        $this->artisan('tasks:send-due-reminders')->assertSuccessful();
+
+        Notification::assertSentTo(
+            $assignee,
+            TaskDueReminder::class,
+            fn (TaskDueReminder $notification): bool => $notification->task->is($dueTomorrow),
+        );
+        Notification::assertNotSentTo(
+            $assignee,
+            TaskDueReminder::class,
+            fn (TaskDueReminder $notification): bool => $notification->task->is($dueToday),
+        );
+        Notification::assertNotSentTo(
+            $assignee,
+            TaskDueReminder::class,
+            fn (TaskDueReminder $notification): bool => $notification->task->is($dueLater),
+        );
+        Notification::assertSentToTimes($assignee, TaskDueReminder::class, 1);
+    }
+
+    public function test_it_ignores_tasks_without_a_due_date(): void
+    {
+        Notification::fake();
+
+        [$workspace, $list] = $this->workspaceWithList();
+        $assignee = $this->addMember($workspace, WorkspaceRole::Member);
+
+        Task::factory()->for($list, 'list')->create([
+            'assigned_to' => $assignee->id,
+            'due_date' => null,
+        ]);
+
+        $this->artisan('tasks:send-due-reminders')->assertSuccessful();
+
+        $this->assertDatabaseCount('task_reminders', 0);
+        Notification::assertNothingSent();
+    }
+
+    public function test_the_reminder_command_is_scheduled_daily(): void
+    {
+        $this->artisan('schedule:list')->assertSuccessful();
+
+        $event = collect(Schedule::events())
+            ->first(fn (Event $event): bool => str_contains((string) $event->command, 'tasks:send-due-reminders'));
+
+        $this->assertNotNull($event);
+        $this->assertSame('0 0 * * *', $event->expression);
     }
 
     public function test_changing_the_due_date_resets_previous_reminders(): void
