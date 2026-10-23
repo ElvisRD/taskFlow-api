@@ -7,6 +7,8 @@ use App\Http\Requests\Attachment\StoreAttachmentRequest;
 use App\Http\Resources\AttachmentResource;
 use App\Models\Attachment;
 use App\Models\Task;
+use App\Models\User;
+use App\Notifications\AttachmentAdded;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -39,9 +41,20 @@ class AttachmentController extends Controller
             'size' => $file->getSize(),
         ]);
 
+        $this->notifyAssignee($task, $attachment, $request->user());
+
         return (new AttachmentResource($attachment->load('uploader')))
             ->response()
             ->setStatusCode(201);
+    }
+
+    private function notifyAssignee(Task $task, Attachment $attachment, User $actor): void
+    {
+        $assignee = $task->assignee;
+
+        if ($assignee !== null && ! $assignee->is($actor)) {
+            $assignee->notify(new AttachmentAdded($task, $attachment, $actor));
+        }
     }
 
     public function download(Attachment $attachment): StreamedResponse

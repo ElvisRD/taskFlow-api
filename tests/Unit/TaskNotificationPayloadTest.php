@@ -2,9 +2,11 @@
 
 namespace Tests\Unit;
 
+use App\Models\Attachment;
 use App\Models\Comment;
 use App\Models\Task;
 use App\Models\User;
+use App\Notifications\AttachmentAdded;
 use App\Notifications\CommentReply;
 use App\Notifications\TaskAssigned;
 use App\Notifications\TaskCommented;
@@ -53,6 +55,7 @@ class TaskNotificationPayloadTest extends TestCase
     {
         $task = $this->task(10, 'Tarea');
         $comment = new Comment(['body' => 'Comentario']);
+        $attachment = new Attachment(['name' => 'reporte.pdf', 'mime_type' => 'application/pdf']);
         $actor = new User(['name' => 'Ana']);
 
         $this->assertSame(
@@ -75,6 +78,28 @@ class TaskNotificationPayloadTest extends TestCase
             NotificationType::TaskDueOverdue,
             (new TaskDueReminder($task, TaskDueReminder::Overdue))->notificationType(),
         );
+        $this->assertSame(
+            NotificationType::AttachmentAdded,
+            (new AttachmentAdded($task, $attachment, $actor))->notificationType(),
+        );
+    }
+
+    public function test_attachment_added_payload_and_subject(): void
+    {
+        $task = $this->task(10, 'Tarea');
+        $attachment = new Attachment(['name' => 'reporte.pdf', 'mime_type' => 'application/pdf']);
+        $attachment->setAttribute('id', 3);
+
+        $notification = new AttachmentAdded($task, $attachment, new User(['name' => 'Ana']));
+        $payload = $notification->toDatabase(new User);
+
+        $this->assertSame('attachment_added', $payload['type']);
+        $this->assertSame(10, $payload['task_id']);
+        $this->assertSame(3, $payload['attachment_id']);
+        $this->assertSame('reporte.pdf', $payload['attachment_name']);
+        $this->assertSame('application/pdf', $payload['mime_type']);
+        $this->assertSame('Ana', $payload['actor']);
+        $this->assertSame('Nuevo archivo adjunto en una tarea', $notification->toMail(new User)->subject);
     }
 
     public function test_task_commented_payload_limits_the_excerpt(): void

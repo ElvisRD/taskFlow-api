@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Http\Controllers\Api\V1;
 
+use App\Models\Attachment;
 use App\Models\Board;
 use App\Models\BoardList;
 use App\Models\Comment;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Notifications\AttachmentAdded;
 use App\Notifications\CommentReply;
 use App\Notifications\TaskAssigned;
 use App\Notifications\TaskCommented;
@@ -35,6 +37,12 @@ class NotificationPreferenceControllerTest extends TestCase
             ->assertJsonPath('data.0.label', 'Tarea asignada')
             ->assertJsonPath('data.0.in_app', true)
             ->assertJsonPath('data.0.email', true)
+            ->assertJsonFragment([
+                'type' => 'attachment_added',
+                'label' => 'Nuevo adjunto',
+                'in_app' => true,
+                'email' => true,
+            ])
             ->assertJsonPath('mutes', []);
     }
 
@@ -261,6 +269,31 @@ class NotificationPreferenceControllerTest extends TestCase
 
         $this->assertSame([], $overdue->via($user));
         $this->assertSame(['database', 'broadcast'], $dueSoon->via($user));
+    }
+
+    public function test_attachment_added_preferences_control_the_notification_channels(): void
+    {
+        $user = User::factory()->create();
+        $task = $this->taskInWorkspace();
+        $attachment = Attachment::factory()->for($task)->make();
+        $notification = new AttachmentAdded($task, $attachment, User::factory()->create());
+
+        $this->assertSame(['database', 'mail', 'broadcast'], $notification->via($user));
+
+        $user->notificationPreferences()->create([
+            'type' => NotificationType::AttachmentAdded->value,
+            'in_app' => true,
+            'email' => false,
+        ]);
+
+        $this->assertSame(['database', 'broadcast'], $notification->via($user));
+
+        $user->notificationPreferences()->updateOrCreate(
+            ['type' => NotificationType::AttachmentAdded->value],
+            ['in_app' => false, 'email' => false],
+        );
+
+        $this->assertSame([], $notification->via($user));
     }
 
     public function test_guest_cannot_manage_notification_preferences(): void

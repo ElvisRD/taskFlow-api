@@ -9,6 +9,7 @@ enum NotificationType: string
     case CommentReply = 'comment_reply';
     case TaskDueSoon = 'task_due_soon';
     case TaskDueOverdue = 'task_overdue';
+    case AttachmentAdded = 'attachment_added';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum NotificationType: string
             self::CommentReply => 'Respuesta a tu comentario',
             self::TaskDueSoon => 'Tarea por vencer',
             self::TaskDueOverdue => 'Tarea vencida',
+            self::AttachmentAdded => 'Nuevo adjunto',
         };
     }
 }

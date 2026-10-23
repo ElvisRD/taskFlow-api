@@ -8,9 +8,11 @@ use App\Models\BoardList;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Notifications\AttachmentAdded;
 use App\WorkspaceRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -43,6 +45,73 @@ class AttachmentControllerTest extends TestCase
         $this->assertSame($task->id, $attachment->task_id);
         $this->assertSame($member->id, $attachment->user_id);
         Storage::disk('local')->assertExists($attachment->path);
+    }
+
+    public function test_upload_notifies_the_task_assignee(): void
+    {
+        Storage::fake('local');
+        Notification::fake();
+
+        [$workspace, $task] = $this->taskInWorkspace();
+        $uploader = $this->addMember($workspace, WorkspaceRole::Member);
+        $assignee = $this->addMember($workspace, WorkspaceRole::Member);
+        $task->update(['assigned_to' => $assignee->id]);
+
+        Sanctum::actingAs($uploader);
+
+        $this->post(
+            '/api/v1/tasks/'.$task->id.'/attachments',
+            ['file' => UploadedFile::fake()->create('reporte.pdf', 100, 'application/pdf')],
+            ['Accept' => 'application/json'],
+        )->assertCreated();
+
+        Notification::assertSentToTimes($assignee, AttachmentAdded::class, 1);
+        Notification::assertSentTo(
+            $assignee,
+            AttachmentAdded::class,
+            fn (AttachmentAdded $notification): bool => $notification->task->is($task)
+                && $notification->actor->is($uploader)
+                && $notification->attachment->name === 'reporte.pdf',
+        );
+        Notification::assertNotSentTo($uploader, AttachmentAdded::class);
+    }
+
+    public function test_upload_does_not_notify_the_assignee_when_they_upload_the_file(): void
+    {
+        Storage::fake('local');
+        Notification::fake();
+
+        [$workspace, $task] = $this->taskInWorkspace();
+        $member = $this->addMember($workspace, WorkspaceRole::Member);
+        $task->update(['assigned_to' => $member->id]);
+
+        Sanctum::actingAs($member);
+
+        $this->post(
+            '/api/v1/tasks/'.$task->id.'/attachments',
+            ['file' => UploadedFile::fake()->create('foto.png', 100, 'image/png')],
+            ['Accept' => 'application/json'],
+        )->assertCreated();
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_upload_does_not_notify_when_the_task_has_no_assignee(): void
+    {
+        Storage::fake('local');
+        Notification::fake();
+
+        [$workspace, $task] = $this->taskInWorkspace();
+
+        Sanctum::actingAs($workspace->owner);
+
+        $this->post(
+            '/api/v1/tasks/'.$task->id.'/attachments',
+            ['file' => UploadedFile::fake()->create('foto.png', 100, 'image/png')],
+            ['Accept' => 'application/json'],
+        )->assertCreated();
+
+        Notification::assertNothingSent();
     }
 
     public function test_upload_rejects_a_disallowed_file_type(): void
