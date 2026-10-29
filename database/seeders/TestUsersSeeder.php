@@ -12,6 +12,10 @@ class TestUsersSeeder extends Seeder
         $users = [
             ['name' => 'Ana Propietaria', 'email' => 'ana@taskflow.test'],
             ['name' => 'Beto Miembro', 'email' => 'beto@taskflow.test'],
+            ['name' => 'Carla Diseñadora', 'email' => 'carla@taskflow.test'],
+            ['name' => 'Diego Desarrollador', 'email' => 'diego@taskflow.test'],
+            ['name' => 'Elena Tester', 'email' => 'elena@taskflow.test'],
+            ['name' => 'Fabio Producto', 'email' => 'fabio@taskflow.test'],
         ];
 
         foreach ($users as $user) {

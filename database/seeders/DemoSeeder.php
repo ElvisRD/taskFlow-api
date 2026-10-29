@@ -43,9 +43,21 @@ class DemoSeeder extends Seeder
             'description' => 'Workspace de demostración para la API de TaskFlow.',
         ]);
 
-        $workspace->members()->syncWithoutDetaching([
-            $member->getKey() => ['role' => WorkspaceRole::Member->value],
-        ]);
+        $members = User::query()
+            ->whereIn('email', [
+                'beto@taskflow.test',
+                'carla@taskflow.test',
+                'diego@taskflow.test',
+                'elena@taskflow.test',
+                'fabio@taskflow.test',
+            ])
+            ->get();
+
+        $workspace->members()->syncWithoutDetaching(
+            $members->mapWithKeys(fn (User $workspaceMember): array => [
+                $workspaceMember->getKey() => ['role' => WorkspaceRole::Member->value],
+            ])->all(),
+        );
 
         $board = Board::factory()->for($workspace)->create([
             'name' => 'Sprint 1',
