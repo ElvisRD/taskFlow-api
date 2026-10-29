@@ -24,7 +24,7 @@ class LoginController extends Controller
             ]);
         }
 
-        $token = $user->createToken($request->string('device_name', 'web')->toString());
+        $token = $user->createApiToken($request->string('device_name', 'web')->toString());
 
         return response()->json([
             'data' => new UserResource($user),

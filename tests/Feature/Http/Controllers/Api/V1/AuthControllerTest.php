@@ -22,7 +22,8 @@ class AuthControllerTest extends TestCase
 
         $response->assertCreated()
             ->assertJsonStructure(['data' => ['id', 'name', 'email'], 'token'])
-            ->assertJsonPath('data.email', 'ada@example.com');
+            ->assertJsonPath('data.email', 'ada@example.com')
+            ->assertJsonPath('data.has_password', true);
 
         $this->assertDatabaseHas('users', ['email' => 'ada@example.com']);
         $this->assertDatabaseHas('personal_access_tokens', ['name' => 'phpunit']);
@@ -66,7 +67,8 @@ class AuthControllerTest extends TestCase
 
         $response->assertOk()
             ->assertJsonStructure(['data' => ['id', 'name', 'email'], 'token'])
-            ->assertJsonPath('data.id', $user->id);
+            ->assertJsonPath('data.id', $user->id)
+            ->assertJsonPath('data.has_password', true);
 
         $this->assertDatabaseHas('personal_access_tokens', [
             'tokenable_id' => $user->id,
@@ -139,7 +141,8 @@ class AuthControllerTest extends TestCase
         $this->withToken($token)
             ->getJson('/api/v1/auth/me')
             ->assertOk()
-            ->assertJsonPath('data.email', 'ana@example.com');
+            ->assertJsonPath('data.email', 'ana@example.com')
+            ->assertJsonPath('data.has_password', true);
     }
 
     public function test_logout_revokes_the_current_token(): void

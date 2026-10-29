@@ -30,7 +30,7 @@ class GoogleLoginController extends Controller
 
         [$user, $created] = $this->resolveUser($identity);
 
-        $token = $user->createToken($request->string('device_name', 'google')->toString());
+        $token = $user->createApiToken($request->string('device_name', 'google')->toString());
 
         return response()->json([
             'data' => new UserResource($user),

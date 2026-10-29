@@ -19,7 +19,9 @@ class RegisterController extends Controller
             'password' => $request->string('password')->toString(),
         ]));
 
-        $token = $user->createToken($request->string('device_name', 'web')->toString());
+        $user->sendEmailVerificationNotification();
+
+        $token = $user->createApiToken($request->string('device_name', 'web')->toString());
 
         return response()->json([
             'data' => new UserResource($user),

@@ -32,6 +32,7 @@ class GoogleLoginControllerTest extends TestCase
             ->assertJsonStructure(['data' => ['id', 'name', 'email', 'avatar'], 'token', 'created'])
             ->assertJsonPath('data.email', 'nueva@example.com')
             ->assertJsonPath('data.avatar', 'https://example.com/avatar.png')
+            ->assertJsonPath('data.has_password', false)
             ->assertJsonPath('created', true);
 
         $this->assertDatabaseHas('users', [

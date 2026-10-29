@@ -26,10 +26,22 @@ class AppServiceProvider extends ServiceProvider
 
     protected function configureRateLimiting(): void
     {
+        RateLimiter::for('register', fn (Request $request) => Limit::perMinute(5)->by($request->ip()));
+
         RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)->by(
             Str::transliterate(Str::lower($request->string('email')).'|'.$request->ip()),
         ));
 
         RateLimiter::for('google-login', fn (Request $request) => Limit::perMinute(10)->by($request->ip()));
+
+        RateLimiter::for('password-email', fn (Request $request) => Limit::perMinute(3)->by(
+            Str::transliterate(Str::lower($request->string('email')).'|'.$request->ip()),
+        ));
+
+        RateLimiter::for('password-reset', fn (Request $request) => Limit::perMinute(5)->by($request->ip()));
+
+        RateLimiter::for('verification-email', fn (Request $request) => Limit::perMinute(3)->by(
+            (string) ($request->user()?->getKey() ?? $request->ip()),
+        ));
     }
 }
