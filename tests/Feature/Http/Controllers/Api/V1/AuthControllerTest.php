@@ -142,7 +142,19 @@ class AuthControllerTest extends TestCase
             ->getJson('/api/v1/auth/me')
             ->assertOk()
             ->assertJsonPath('data.email', 'ana@example.com')
-            ->assertJsonPath('data.has_password', true);
+            ->assertJsonPath('data.has_password', true)
+            ->assertJsonPath('data.is_demo', false);
+    }
+
+    public function test_me_identifies_demo_accounts(): void
+    {
+        $user = User::factory()->create(['email' => 'ana@taskflow.test']);
+        $token = $user->createToken('phpunit')->plainTextToken;
+
+        $this->withToken($token)
+            ->getJson('/api/v1/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.is_demo', true);
     }
 
     public function test_logout_revokes_the_current_token(): void

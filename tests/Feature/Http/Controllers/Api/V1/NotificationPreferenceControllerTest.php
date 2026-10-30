@@ -170,7 +170,7 @@ class NotificationPreferenceControllerTest extends TestCase
     public function test_preferences_control_the_notification_channels(): void
     {
         $user = User::factory()->create();
-        $task = $this->taskInWorkspace();
+        $task = $this->taskInWorkspace($user);
         $notification = new TaskAssigned($task, User::factory()->create());
 
         $this->assertSame(['database', 'mail', 'broadcast'], $notification->via($user));
@@ -194,7 +194,7 @@ class NotificationPreferenceControllerTest extends TestCase
     public function test_comment_added_preferences_control_the_notification_channels(): void
     {
         $user = User::factory()->create();
-        $task = $this->taskInWorkspace();
+        $task = $this->taskInWorkspace($user);
         $comment = Comment::factory()->for($task)->create();
         $notification = new TaskCommented($task, $comment, User::factory()->create());
 
@@ -219,7 +219,7 @@ class NotificationPreferenceControllerTest extends TestCase
     public function test_comment_reply_preferences_control_the_notification_channels(): void
     {
         $user = User::factory()->create();
-        $task = $this->taskInWorkspace();
+        $task = $this->taskInWorkspace($user);
         $parent = Comment::factory()->for($task)->create();
         $reply = Comment::factory()->for($task)->create(['parent_id' => $parent->id]);
         $notification = new CommentReply($task, $reply, User::factory()->create());
@@ -245,7 +245,7 @@ class NotificationPreferenceControllerTest extends TestCase
     public function test_due_reminder_preferences_control_the_notification_channels_per_scope(): void
     {
         $user = User::factory()->create();
-        $task = $this->taskInWorkspace();
+        $task = $this->taskInWorkspace($user);
         $dueSoon = new TaskDueReminder($task, TaskDueReminder::DueSoon);
         $overdue = new TaskDueReminder($task, TaskDueReminder::Overdue);
 
@@ -274,7 +274,7 @@ class NotificationPreferenceControllerTest extends TestCase
     public function test_attachment_added_preferences_control_the_notification_channels(): void
     {
         $user = User::factory()->create();
-        $task = $this->taskInWorkspace();
+        $task = $this->taskInWorkspace($user);
         $attachment = Attachment::factory()->for($task)->make();
         $notification = new AttachmentAdded($task, $attachment, User::factory()->create());
 
@@ -351,11 +351,15 @@ class NotificationPreferenceControllerTest extends TestCase
             ->assertJsonValidationErrors('email');
     }
 
-    private function taskInWorkspace(): Task
+    private function taskInWorkspace(User ...$members): Task
     {
         $workspace = Workspace::factory()->create();
         $board = Board::factory()->for($workspace)->create();
         $list = BoardList::factory()->for($board)->create();
+
+        foreach ($members as $member) {
+            $workspace->members()->attach($member->getKey(), ['role' => WorkspaceRole::Member->value]);
+        }
 
         return Task::factory()->for($list, 'list')->create();
     }

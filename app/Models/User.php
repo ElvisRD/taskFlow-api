@@ -23,6 +23,13 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    private const DEMO_EMAIL_DOMAIN = '@taskflow.test';
+
+    public function isDemoAccount(): bool
+    {
+        return str_ends_with(strtolower((string) $this->email), self::DEMO_EMAIL_DOMAIN);
+    }
+
     public function ownedWorkspaces(): HasMany
     {
         return $this->hasMany(Workspace::class, 'owner_id');
@@ -97,6 +104,10 @@ class User extends Authenticatable implements MustVerifyEmail
             return ['database', 'mail', 'broadcast'];
         }
 
+        if ($task !== null && ! $this->belongsToTaskWorkspace($task)) {
+            return [];
+        }
+
         if ($task !== null && $this->mutesNotificationsFor($task)) {
             return [];
         }
@@ -123,6 +134,13 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return $channels;
+    }
+
+    private function belongsToTaskWorkspace(Task $task): bool
+    {
+        $workspace = $task->list?->board?->workspace;
+
+        return $workspace === null || $workspace->hasMember($this);
     }
 
     private function mutesNotificationsFor(Task $task): bool

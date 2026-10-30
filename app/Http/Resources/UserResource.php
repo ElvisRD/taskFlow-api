@@ -17,6 +17,7 @@ class UserResource extends JsonResource
             'email_verified' => $this->hasVerifiedEmail(),
             'email_verified_at' => $this->email_verified_at,
             'has_password' => $this->password !== null,
+            'is_demo' => $this->resource->isDemoAccount(),
             'created_at' => $this->created_at,
         ];
     }

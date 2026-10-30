@@ -116,6 +116,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Workspace Invitations
+    |--------------------------------------------------------------------------
+    |
+    | Number of minutes that a workspace invitation remains valid. Resending
+    | an invitation issues a fresh token and extends the expiration window.
+    |
+    */
+
+    'invitations' => [
+        'expire' => (int) env('AUTH_INVITATION_EXPIRE', 10080),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Password Confirmation Timeout
     |--------------------------------------------------------------------------
     |

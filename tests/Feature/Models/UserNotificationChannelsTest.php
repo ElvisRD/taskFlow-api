@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Models\Workspace;
 use App\NotificationType;
+use App\WorkspaceRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,7 +19,7 @@ class UserNotificationChannelsTest extends TestCase
     public function test_a_user_without_preferences_receives_every_channel(): void
     {
         $user = User::factory()->create();
-        $task = $this->taskInWorkspace();
+        $task = $this->taskInWorkspace($user);
 
         $this->assertSame(
             ['database', 'mail', 'broadcast'],
@@ -29,7 +30,7 @@ class UserNotificationChannelsTest extends TestCase
     public function test_in_app_can_be_disabled_without_disabling_email(): void
     {
         $user = User::factory()->create();
-        $task = $this->taskInWorkspace();
+        $task = $this->taskInWorkspace($user);
 
         $this->preference($user, NotificationType::TaskAssigned, inApp: false, email: true);
 
@@ -42,7 +43,7 @@ class UserNotificationChannelsTest extends TestCase
     public function test_email_can_be_disabled_without_disabling_in_app(): void
     {
         $user = User::factory()->create();
-        $task = $this->taskInWorkspace();
+        $task = $this->taskInWorkspace($user);
 
         $this->preference($user, NotificationType::TaskAssigned, inApp: true, email: false);
 
@@ -55,7 +56,7 @@ class UserNotificationChannelsTest extends TestCase
     public function test_both_channels_can_be_disabled_for_a_type(): void
     {
         $user = User::factory()->create();
-        $task = $this->taskInWorkspace();
+        $task = $this->taskInWorkspace($user);
 
         $this->preference($user, NotificationType::TaskAssigned, inApp: false, email: false);
 
@@ -68,7 +69,7 @@ class UserNotificationChannelsTest extends TestCase
     public function test_preferences_only_apply_to_their_notification_type(): void
     {
         $user = User::factory()->create();
-        $task = $this->taskInWorkspace();
+        $task = $this->taskInWorkspace($user);
 
         $this->preference($user, NotificationType::TaskCommented, inApp: false, email: false);
 
@@ -90,6 +91,8 @@ class UserNotificationChannelsTest extends TestCase
         $task = Task::factory()->for($list, 'list')->create();
         $mutedUser = User::factory()->create();
         $otherUser = User::factory()->create();
+        $workspace->members()->attach($mutedUser->getKey(), ['role' => WorkspaceRole::Member->value]);
+        $workspace->members()->attach($otherUser->getKey(), ['role' => WorkspaceRole::Member->value]);
 
         $mutedUser->notificationMutes()->create([
             'muteable_type' => Workspace::class,
@@ -113,6 +116,7 @@ class UserNotificationChannelsTest extends TestCase
         $list = BoardList::factory()->for($board)->create();
         $task = Task::factory()->for($list, 'list')->create();
         $user = User::factory()->create();
+        $workspace->members()->attach($user->getKey(), ['role' => WorkspaceRole::Member->value]);
 
         $this->preference($user, NotificationType::TaskAssigned, inApp: true, email: true);
 
@@ -140,11 +144,15 @@ class UserNotificationChannelsTest extends TestCase
         ]);
     }
 
-    private function taskInWorkspace(): Task
+    private function taskInWorkspace(User ...$members): Task
     {
         $workspace = Workspace::factory()->create();
         $board = Board::factory()->for($workspace)->create();
         $list = BoardList::factory()->for($board)->create();
+
+        foreach ($members as $member) {
+            $workspace->members()->attach($member->getKey(), ['role' => WorkspaceRole::Member->value]);
+        }
 
         return Task::factory()->for($list, 'list')->create();
     }

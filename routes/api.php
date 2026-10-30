@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\TaskActivityController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
+use App\Http\Controllers\Api\V1\WorkspaceInvitationController;
 use App\Http\Controllers\Api\V1\WorkspaceMemberController;
 use Illuminate\Broadcasting\BroadcastController;
 use Illuminate\Support\Facades\Route;
@@ -84,6 +85,17 @@ Route::prefix('v1')->group(function (): void {
                 ->name('workspaces.members.update');
             Route::delete('workspaces/{workspace}/members/{user}', [WorkspaceMemberController::class, 'destroy'])
                 ->name('workspaces.members.destroy');
+
+            Route::get('workspaces/{workspace}/invitations', [WorkspaceInvitationController::class, 'index'])
+                ->name('workspaces.invitations.index');
+            Route::post('workspaces/{workspace}/invitations', [WorkspaceInvitationController::class, 'store'])
+                ->name('workspaces.invitations.store');
+            Route::post('workspaces/{workspace}/invitations/{invitation}/resend', [WorkspaceInvitationController::class, 'resend'])
+                ->name('workspaces.invitations.resend');
+            Route::delete('workspaces/{workspace}/invitations/{invitation}', [WorkspaceInvitationController::class, 'destroy'])
+                ->name('workspaces.invitations.destroy');
+            Route::post('workspace-invitations/{token}/accept', [WorkspaceInvitationController::class, 'accept'])
+                ->name('workspace-invitations.accept');
 
             Route::patch('workspaces/{workspace}/boards/reorder', [BoardController::class, 'reorder'])
                 ->name('workspaces.boards.reorder');

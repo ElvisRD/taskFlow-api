@@ -88,6 +88,22 @@ class UpdatePasswordControllerTest extends TestCase
         $this->assertDatabaseMissing('personal_access_tokens', ['id' => $other->accessToken->id]);
     }
 
+    public function test_demo_accounts_cannot_update_their_password(): void
+    {
+        $user = User::factory()->create(['email' => 'ana@taskflow.test']);
+        $token = $user->createApiToken('phpunit');
+
+        $this->withToken($token->plainTextToken)
+            ->putJson('/api/v1/auth/password', [
+                'current_password' => 'password',
+                'password' => 'NewPassword123!',
+                'password_confirmation' => 'NewPassword123!',
+            ])
+            ->assertForbidden();
+
+        $this->assertTrue(Hash::check('password', $user->fresh()->password));
+    }
+
     public function test_the_new_password_must_be_confirmed(): void
     {
         $user = User::factory()->create();
